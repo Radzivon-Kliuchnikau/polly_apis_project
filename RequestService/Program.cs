@@ -2,6 +2,10 @@ using RequestService.Policies;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpClient("Test Polly").AddPolicyHandler(
+    request => new ClientPolicy().ImmediateHttpRetry
+);
+
 builder.Services.AddSingleton<ClientPolicy>(new ClientPolicy());
 
 builder.Services.AddEndpointsApiExplorer();
@@ -18,13 +22,14 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 
-app.MapGet("/api/request", async (int id, ClientPolicy clientPolicy) =>
+app.MapGet("/api/request", async (int id, IHttpClientFactory clientFactory) =>
 {
-    var client = new HttpClient();
+    // var client = new HttpClient();
+    var client = clientFactory.CreateClient("Test Polly");
 
-    // var response = await client.GetAsync($"http://localhost:5177/getresponse?id={id}");
-    var response = await clientPolicy.ExponentialHttpRetry.ExecuteAsync(
-        () => client.GetAsync($"http://localhost:5177/getresponse?id={id}"));
+    var response = await client.GetAsync($"http://localhost:5177/getresponse?id={id}");
+    // var response = await clientPolicy.ImmediateHttpRetry.ExecuteAsync(
+    //     () => client.GetAsync($"http://localhost:5177/getresponse?id={id}"));
 
     if (response.IsSuccessStatusCode)
     {
